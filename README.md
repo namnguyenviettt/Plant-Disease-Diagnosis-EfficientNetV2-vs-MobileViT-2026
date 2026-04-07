@@ -12,7 +12,6 @@ Dự án này cung cấp một hệ thống chẩn đoán bệnh thực vật ho
 - ⚡ **Tối ưu tài nguyên:** Suy luận cực nhanh với mô hình nhẹ, không gây quá tải cho bộ nhớ máy chủ.
 - 🤖 **Trợ lý ảo Nông nghiệp:** Tự động cung cấp hướng dẫn dùng thuốc và xử lý bệnh từ Mô hình ngôn ngữ lớn (LLM).
 
-.
 ├── notebooks/              
 ├── server/                  
 ├── models/                 
