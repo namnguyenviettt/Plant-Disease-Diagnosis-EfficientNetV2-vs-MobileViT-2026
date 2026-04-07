@@ -1,0 +1,20 @@
+Classification Report — EfficientNetV2-S
+
+                        precision    recall  f1-score   support
+
+          cafe_Healthy      0.998     0.989     0.993       450
+        cafe_Leaf rust      0.648     0.998     0.786       548
+            cafe_Miner      0.949     0.331     0.491       450
+            cafe_Phoma      0.984     0.987     0.986       450
+rice_Healthy Rice Leaf      0.986     1.000     0.993        71
+       rice_Leaf Blast      1.000     0.988     0.994        82
+       rice_Leaf scald      0.966     1.000     0.983        85
+    rice_Sheath Blight      1.000     0.953     0.976        64
+          tieu_Footrot      1.000     0.988     0.994        84
+          tieu_Healthy      1.000     1.000     1.000       139
+    tieu_Pollu_Disease      0.989     1.000     0.994        89
+     tieu_Slow-Decline      1.000     1.000     1.000        84
+
+              accuracy                          0.878      2596
+             macro avg      0.960     0.936     0.932      2596
+          weighted avg      0.912     0.878     0.861      2596

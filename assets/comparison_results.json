@@ -1,0 +1,24 @@
+{
+  "EfficientNetV2-S": {
+    "model_name": "tf_efficientnetv2_s",
+    "train_loss": 0.5152237143111862,
+    "train_acc": 98.63791743360505,
+    "val_loss": 0.4057946788079925,
+    "val_acc": 96.56992084432717,
+    "test_loss": 0.8808798238933545,
+    "test_acc": 87.75038520801233,
+    "best_val_acc": 96.5259454705365,
+    "params_M": 20.19286
+  },
+  "MobileViT-S": {
+    "model_name": "mobilevit_s",
+    "train_loss": 0.12621954758285442,
+    "train_acc": 99.00078885090717,
+    "val_loss": 0.12461545704327452,
+    "val_acc": 99.51627088830254,
+    "test_loss": 0.6567217058319891,
+    "test_acc": 87.82742681047766,
+    "best_val_acc": 99.51627088830254,
+    "params_M": 4.945324
+  }
+}
