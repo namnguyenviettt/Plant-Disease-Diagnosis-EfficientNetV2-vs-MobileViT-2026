@@ -16,3 +16,10 @@ Dự án này cung cấp một hệ thống chẩn đoán bệnh thực vật ho
 ├── server/                  
 ├── models/                 
 ├── README.md               
+
+
+---
+## 👥 Contributors
+* **Nguyễn Việt Nam** - [@namnguyenviettt](https://github.com/namnguyenviettt) 
+* **Hồ Minh Hiếu** - [@iamminhhieuz206-sys](https://github.com/iamminhhieuz206-sys)
+* **Đỗ Nguyên Khoa** - [@khoadepzaivl](https://github.com/khoadepzaivl)
