@@ -17,6 +17,8 @@ Dự án này cung cấp một hệ thống chẩn đoán bệnh thực vật ho
 ├── models/                 
 ├── README.md               
 
+## 📺 Demo Video
+[![Xem Demo AI Plant Disease Diagnosis](assets/thumbnail.png)](https://drive.google.com/file/d/1y4H0hEzIDwFltWM-gjwxVuZxN2XiRi-Y/view?usp=sharing)
 
 ---
 ## 👥 Contributors
