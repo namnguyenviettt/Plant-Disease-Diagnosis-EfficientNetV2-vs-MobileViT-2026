@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -20,7 +21,7 @@ void main() {
 // MODELS
 // ============================================================
 
-enum MessageType { image, text, ai }
+enum MessageType { image, text, ai, heatmap }
 
 class ChatMessage {
   final MessageType type;
@@ -552,7 +553,7 @@ class _ChatScreenState extends State<ChatScreen> {
   XFile? _pendingImage;
   final TextEditingController _promptCtrl = TextEditingController();
 
-  static const String _baseUrl = 'http://172.21.200.107:8000';
+  static const String _baseUrl = 'http://192.168.1.120:8000';
 
   @override
   void initState() {
@@ -694,12 +695,37 @@ class _ChatScreenState extends State<ChatScreen> {
       final data = jsonDecode(res.body) as Map<String, dynamic>;
 
       if (data['conversation_id'] != null) {
-        setState(
-                () => _conv.serverConvId = data['conversation_id'] as String);
+        setState(() => _conv.serverConvId = data['conversation_id'] as String);
       }
 
-      final solution = data['solution'] as String? ?? 'Không có giải pháp';
-      await _simulateStream(solution);
+      final disease      = data['disease'] as String?;
+      final confidence   = (data['confidence'] as num?)?.toDouble() ?? 0.0;
+      final heatmapB64   = data['heatmap_b64'] as String?;
+      final bbox         = data['bbox'] as Map<String, dynamic>?;
+      final coveragePct  = (data['coverage_pct'] as num?)?.toDouble() ?? 0.0;
+      final citations    = (data['citations'] as List?)?.cast<String>() ?? [];
+      final solution     = data['solution'] as String? ?? 'Không có giải pháp';
+
+      // Thêm heatmap message nếu có
+      if (heatmapB64 != null && disease != null) {
+        await _addMessage(ChatMessage(
+          type: MessageType.heatmap,
+          content: json.encode({
+            'disease':      disease,
+            'confidence':   confidence,
+            'heatmap_b64':  heatmapB64,
+            'bbox':         bbox,
+            'coverage_pct': coveragePct,
+          }),
+        ));
+      }
+
+      // Thêm solution + citations
+      final fullSolution = citations.isNotEmpty
+          ? '$solution\n\n📚 **Nguồn tham khảo:**\n${citations.join('\n')}'
+          : solution;
+
+      await _simulateStream(fullSolution);
     } catch (e) {
       await _addMessage(ChatMessage(
         type: MessageType.ai,
@@ -1057,6 +1083,8 @@ class _ChatScreenState extends State<ChatScreen> {
         return _buildUserBubble(msg);
       case MessageType.ai:
         return _buildAIBubble(msg.content);
+      case MessageType.heatmap:
+        return HeatmapBubble(jsonContent: msg.content);
     }
   }
 
@@ -1821,6 +1849,188 @@ class _BounceDotState extends State<_BounceDot>
             shape: BoxShape.circle,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class HeatmapBubble extends StatefulWidget {
+  final String jsonContent;
+
+  const HeatmapBubble({super.key, required this.jsonContent});
+
+  @override
+  State<HeatmapBubble> createState() => _HeatmapBubbleState();
+}
+
+class _HeatmapBubbleState extends State<HeatmapBubble> {
+  @override
+  Widget build(BuildContext context) {
+    final data        = jsonDecode(widget.jsonContent) as Map<String, dynamic>;
+    final disease     = data['disease'] as String? ?? 'Không xác định';
+    final confidence  = (data['confidence'] as num?)?.toDouble() ?? 0.0;
+    final heatmapB64  = data['heatmap_b64'] as String?;
+    final coveragePct = (data['coverage_pct'] as num?)?.toDouble() ?? 0.0;
+
+    Uint8List? imageBytes;
+    if (heatmapB64 != null) {
+      try {
+        imageBytes = base64Decode(heatmapB64);
+      } catch (_) {}
+    }
+
+    Color confColor;
+    if (confidence >= 0.8)       confColor = const Color(0xFF2D5016);
+    else if (confidence >= 0.5)  confColor = const Color(0xFFD4A843);
+    else                         confColor = const Color(0xFFD85A30);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD4CBAA)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+            child: Row(
+              children: [
+                const Text('🔬', style: TextStyle(fontSize: 18)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    disease,
+                    style: const TextStyle(
+                      color: Color(0xFF1A2E0A),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: confColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: confColor.withOpacity(0.4)),
+                  ),
+                  child: Text(
+                    '${(confidence * 100).toStringAsFixed(1)}%',
+                    style: TextStyle(
+                      color: confColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (imageBytes != null)
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(16),
+                    bottomRight: Radius.circular(16),
+                  ),
+                  child: Image.memory(
+                    imageBytes,
+                    width: double.infinity,
+                    height: 220,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  left: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '🌡️ Vùng bệnh: ${coveragePct.toStringAsFixed(1)}%',
+                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 8,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'GradCAM · vùng màu đỏ = bị ảnh hưởng',
+                      style: TextStyle(color: Colors.white70, fontSize: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          if (imageBytes == null)
+            const Padding(
+              padding: EdgeInsets.all(14),
+              child: Text('⚠️ Không thể tạo heatmap',
+                  style: TextStyle(color: Color(0xFF8A9E72))),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class CitationCard extends StatelessWidget {
+  final List<String> citations;
+  const CitationCard({super.key, required this.citations});
+
+  @override
+  Widget build(BuildContext context) {
+    if (citations.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8, left: 40, right: 40),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F5D4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFD4CBAA)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('📚 Nguồn tham khảo:',
+              style: TextStyle(
+                color: Color(0xFF2D5016),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              )),
+          const SizedBox(height: 4),
+          ...citations.map((c) => Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              '• $c',
+              style: const TextStyle(
+                color: Color(0xFF4A5E35),
+                fontSize: 11,
+              ),
+            ),
+          )),
+        ],
       ),
     );
   }
